@@ -114,6 +114,7 @@ SELECT
     is_repeat_session
 FROM website_sessions
 WHERE year(created_at) = '2014'
+
 SELECT * FROM users LIMIT 1
 
 -- new user
