@@ -99,6 +99,9 @@ group by dept;
 select * from Emp where id in (4,2,1,6,9);
 
 
+
+
+
 -- ----------------------------------------------- 임의의 1글자 반환
 
 CREATE DEFINER=`mydeal`@`%` FUNCTION `f_rand1`(_str varchar(255)) RETURNS varchar(31) CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci
