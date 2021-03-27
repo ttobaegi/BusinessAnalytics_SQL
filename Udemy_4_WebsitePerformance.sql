@@ -271,34 +271,137 @@ group by yearweek(created_at);
 -- ------------------------------------------------------------------------
 ### 6. CONVERSION FUNNELS
 -- sessions | click rate by pagenames 
--- full conversion funnel :: from /lander-1 to order
--- analyzing how many customers make it to each step
--- between '2012-08-05' and '2012-09-05'
+-- 1) select all pageviews for relevant sessions
+-- 2) identify each pageview as the specific funnel step
+-- 3) create the session-level conversion funnel view
+-- 4) aggregate the data to assess funnel performance
 
+-- *MYSOLUTION 
 -- with : total sessions & sessions by pageview_url 
 -- case when > pivot
 select distinct pageview_url from website_pageviews;
 with total as(
-select pageview_url, website_session_id, count(distinct website_pageview_id) cv
-from website_pageviews p
-where p.created_at between '2012-08-05' and '2012-09-05' 
+select p.pageview_url, w.website_session_id
+from website_sessions w inner join  website_pageviews p on w.website_session_id=p.website_session_id 
+where w.created_at > '2012-08-05' and w.created_at < '2012-09-05'
+	and w.utm_source ='gsearch'   and w.utm_campaign='nonbrand'
 	and pageview_url in ('/lander-1','/products','/the-original-mr-fuzzy','/cart','/shipping','/billing','/thank-you-for-your-order')
 group by 1, 2
 )
-, b as (
-select count(distinct website_session_id),
+, page  as (
+select count(distinct website_session_id) sessions,
+		/**analyzing how many customers make it to each step**/
 		sum(case when pageview_url = '/products' then 1 else 0 end) as to_products,
 		sum(case when pageview_url = '/the-original-mr-fuzzy' then 1 else 0 end) as to_mrfuzzy,
 		sum(case when pageview_url = '/cart' then 1 else 0 end) as to_cart,
 		sum(case when pageview_url = '/shipping' then 1 else 0 end) as to_shipping,
 		sum(case when pageview_url = '/billing' then 1 else 0 end) as to_billing,
         sum(case when pageview_url = '/thank-you-for-your-order' then 1 else 0 end) as to_thankyou
-from total
-)
-select to_products+ to_mrfuzzy+to_cart+to_shipping+to_billing+to_thankyou from b;
+from total 
+) select sessions,
+		to_products/sessions *100 as lander_clickthrough_rate,
+        to_mrfuzzy/to_products *100 as products_clickthrough_rate,
+        to_cart/to_mrfuzzy *100 as mrfuzzy_clickthrough_rate,
+        to_shipping/to_cart *100 as cart_clickthrough_rate,
+        to_billing/to_shipping *100 as shipping_clickthrough_rate,
+        to_thankyou/to_billing *100 as billing_clickthrough_rate
+from page;
 
-(select pageview_url, website_session_id, count(distinct website_pageview_id) cv
+-- * SOLUTION by others : SUB-QUERY
+create temporary table session_level_funnel  -- 세션별 funnel 테이블 생성 
+select website_session_id,
+	max(products) to_products,
+    max(mrfuzzy) to_mrfuzzy,
+    max(cart) to_cart,
+    max(shipping) to_shipping,
+    max(billing) to_billing,
+    max(thankyou) to_thankyou
+from (
+select w.website_session_id, p.pageview_url, p.created_at as pageview_created_at, -- created at of each pageview session
+		case when pageview_url = '/products' then 1 else 0 end as products,
+		case when pageview_url = '/the-original-mr-fuzzy' then 1 else 0 end as mrfuzzy,
+		case when pageview_url = '/cart' then 1 else 0 end as cart,
+		case when pageview_url = '/shipping' then 1 else 0 end as shipping,
+		case when pageview_url = '/billing' then 1 else 0 end as billing,
+        case when pageview_url = '/thank-you-for-your-order' then 1 else 0 end as thankyou
+from website_sessions w inner join  website_pageviews p on w.website_session_id=p.website_session_id 
+where w.created_at > '2012-08-05' and w.created_at < '2012-09-05'
+	and w.utm_source ='gsearch'   and w.utm_campaign='nonbrand'
+	and pageview_url in ('/lander-1','/products','/the-original-mr-fuzzy','/cart','/shipping','/billing','/thank-you-for-your-order')
+order by 1 , 2 -- GROUP BY session_id
+) as pageview_level
+group by website_session_id ; -- aggregate by website session id
+
+select count(distinct website_session_id) sessions,
+		count(distinct case when to_products =1 then website_session_id else null end),
+		count(distinct case when to_mrfuzzy =1 then website_session_id else null end),
+		count(distinct case when to_cart =1 then website_session_id else null end),
+		count(distinct case when to_shipping =1 then website_session_id else null end),
+		count(distinct case when to_billing =1 then website_session_id else null end),
+		count(distinct case when to_thankyou =1 then website_session_id else null end)
+from session_level_funnel;
+
+select count(distinct website_session_id) sessions,
+		count(distinct case when to_products =1 then website_session_id else null end)
+			/count(distinct website_session_id) *100 as lander_clickthrough_rate,
+		count(distinct case when to_mrfuzzy =1 then website_session_id else null end)
+			/count(distinct case when to_products =1 then website_session_id else null end) *100 as product_clickthrough_rate,
+		count(distinct case when to_cart =1 then website_session_id else null end)
+			/count(distinct website_session_id) *100 as mrfuzzy_clickthrough_rate,
+		count(distinct case when to_shipping =1 then website_session_id else null end)
+			/count(distinct case when to_cart =1 then website_session_id else null end)*100 as cart_clickthrough_rate,
+		count(distinct case when to_billing =1 then website_session_id else null end)
+			/count(distinct case when to_shipping =1 then website_session_id else null end) *100 as shipping_clickthrough_rate,
+		count(distinct case when to_thankyou =1 then website_session_id else null end)
+			/count(distinct case when to_billing =1 then website_session_id else null end) *100 as billing_clickthrough_rate
+from session_level_funnel;
+
+
+-- ------------------------------------------------------------------------
+### 7. CONVERSION FUNNEL TEST
+-- 1) finding the starting point to frame the analysis
+-- 2) join order tables & filter out date url pageviewid
+select min(created_at) first_created_at, min(website_pageview_id) from website_pageviews where pageview_url ='/billing-2'; 
+	-- first pageview date & id of billing-2 : 2012-09-10, 53550
+
+with billing as(
+select 
+	p.website_session_id,
+	sum(case when pageview_url ='/billing' then 1 else 0 end) as billing,
+   	sum(case when pageview_url ='/billing-2' then 1 else 0 end)as billing2,
+   	sum(case when order_id is not null then 1 else 0 end) as orders
 from website_pageviews p
-where p.created_at between '2012-08-05' and '2012-09-05' 
-group by 1, 2
-)a
+left join orders o on p.website_session_id=o.website_session_id
+where p.created_at < '2012-11-10' 
+	and p.website_pageview_id >= 53550 
+	and pageview_url in ('/billing','/billing-2')
+group by website_session_id
+)
+select case when billing = 1 then '/billing' else '/billing-2' end as billing_version_seen,
+		count(distinct website_session_id) sessions,
+        count(distinct case when orders =1 then website_session_id else null end) orders,
+		count(distinct case when orders =1 then website_session_id else null end)
+			/ count(distinct website_session_id)  *100 as billing_to_order_rt
+from billing
+group by 1 ;
+
+
+select
+	billing_version_seen,
+    count(distinct website_session_id) as sessions,
+    count(distinct order_id) as orders,
+    count(distinct order_id)/count(distinct website_session_id) * 100 as billing_to_order_rt
+from 
+(
+select 
+	p.website_session_id,
+	p.pageview_url as billing_version_seen,
+    o.order_id
+from website_pageviews p
+		/** JOIN ORDER TABLE :: Order table내 order_id 기준 filter out **/
+    left join orders o on p.website_session_id=o.website_session_id
+where p.created_at < '2012-11-10' -- analysis date
+	and website_pageview_id >= 53550 
+	and pageview_url in ('/billing','/billing-2')
+) billing
+group by 1
