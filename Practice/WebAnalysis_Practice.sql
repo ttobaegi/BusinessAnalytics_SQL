@@ -15,7 +15,7 @@ where month(created_at) = 1 and year(created_at) = 2013;
 
 
 -- --------------------------------------------------------------------
-## how thos customers behaved over time
+## how those customers behaved over time
 ## 2. How many of them returned per month over the rest of the year?
 /**
 1) with : 2014 1월 고객 
@@ -151,4 +151,36 @@ from time_diff
 select visit_month , sum(case when cust_type = 'retained' then 1 else 0 end ) /count(user_id) as retention from segment group by 1;
 
 ############## Retention graph by months : X months Y retention rate(number) : MONTH-TO-MONTH Customer retention
+select * from orders limit 1;
+## ARPU 
+with month_arpu as 
+(
+SELECT user_id,
+		datediff(mon
+
+SELECT user_id
+		, timestampdiff(month,'2012-03-20', created_at) as visit_month
+        , round(sum(price_usd),2) as revenue
+FROM orders
+where  timestampadd(year, -1, '2012-12-31') 
+group by 1,2
+) 
+, time_lapse as (
+select user_id, visit_month, lead(visit_month,1) over w  as next_visit_month from visit_log 
+window w as (partition by user_id order by user_id, visit_month) 
+)
+, time_diff as (												
+select user_id, visit_month, next_visit_month, next_visit_month-visit_month  as time_gap 
+from time_lapse
+)
+, segment as (
+select user_id,	
+		visit_month,
+		case when time_gap is null then 'lost' 
+			when time_gap = 1 then 'retained'
+            else 'lagger' end  as cust_type
+from time_diff
+)
+-- proportion of cust_type = retained : SUM(CASE WHEN - THEN 1 ELSE 0)
+select visit_month , sum(case when cust_type = 'retained' then 1 else 0 end ) /count(user_id) as retention from segment group by 1;
 
