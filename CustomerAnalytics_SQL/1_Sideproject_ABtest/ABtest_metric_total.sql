@@ -36,7 +36,7 @@ SELECT distinct event_name FROM events ;	-- event type
 # ALTERNATIVE Hypothesis : test group(treatment group) show higher engagement behavior than control group
 # A/B tests with t-test vs z-test reference : https://bytepawn.com/ab-testing-and-the-ttest.html
 # test statistics measurement : https://conductrics.com/pvalues
-
+# Validating Test Results : https://mode.com/sql-tutorial/validating-ab-test-results
 
 -- -------------------------------------------------------------------------------------------------------------------------
 ## Query 1: A/B Test Results - Messages Sent
@@ -191,10 +191,19 @@ FROM a
 GROUP BY 1
 ORDER BY 2;
 
+
 -------------------------------------------------------------------------------------------------------------------------
 ## Query 6: Experiment Group by Lanugage
-
-
-
+-- language | control_users | test_users
+SELECT DISTINCT language FROM users;
+SELECT language,
+		SUM(CASE WHEN experiment_group = 'control_group' THEN 1 ELSE 0 END) AS control_users,
+        SUM(CASE WHEN experiment_group = 'test_group' THEN 1 ELSE 0 END) AS test_users
+FROM users u
+	JOIN experiments ex 
+		ON u.user_id = ex.user_id 
+        AND experiment = 'publisher_update'
+GROUP BY 1
+ORDER BY 1;
 
 
