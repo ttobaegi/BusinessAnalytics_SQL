@@ -81,24 +81,28 @@ GROUP BY 1,2
         SUM(users) OVER () total_treated_users
 FROM b
 ) 
-SELECT experiment,
+, d AS (
+	SELECT experiment,
 		experiment_group,
         users,
-        average,
         total_treated_users,
-        concat(round(users/total_treated_users*100,2),'%') AS treatment_percent,
+        CAST(ROUND(average,4) AS FLOAT) AS average,
+        CONCAT(ROUND(users/total_treated_users,4)*100,'%') AS treatment_percent,
         total,
-        average,
-        average - control_average AS rate_lift,
+        ROUND(average - control_average, 4) AS rate_difference,
+        ROUND((average - control_average)/control_average) AS rate_lift,
         stdev,
-        (average-control_average) / SQRT((variance/users) + (control_variance/control_users)) AS t_stat,
-        
-FROM c
+        ROUND( (average-control_average) / SQRT((variance/users) + (control_variance/control_users)) , 4) AS t_stat
+FROM c 
+) SELECT * ,
+	
+FROM d
 LEFT JOIN normal_distribution norm
-	ON ;
+	ON norm.score = ABS(ROUND(t_stat,3))
+    ;
 
 
-select * from normal_distribution limit 5;
+select * from normal_distribution #WHERE score = 7.63
 
 
 
