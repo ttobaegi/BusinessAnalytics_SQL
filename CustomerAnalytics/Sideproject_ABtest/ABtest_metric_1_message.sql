@@ -20,6 +20,7 @@ select count(*) from experiments;  	-- 실험결과
 select count(*) from events;  		-- 유저의 모든 행동로그
 select count(*) from users;  		-- 가입된 유저 가입정보/상태(active& pending)
 select distinct(state) from users;
+SELECT distinct event_name FROM events ;	-- event type
 
 
 /** Business Situation
@@ -37,8 +38,8 @@ select distinct(state) from users;
 # test statistics measurement : https://conductrics.com/pvalues
 
 
-## Query 1 - Messages Sent
-SELECT distinct event_name FROM events ;	-- event type
+-- -------------------------------------------------------------------------------------------------------------------------
+## Query 1: A/B Test Results - Messages Sent
 
 WITH a AS (
 SELECT  experiment,
@@ -91,18 +92,108 @@ FROM b
         total,
         ROUND(average - control_average, 4) AS rate_difference,
         ROUND((average - control_average)/control_average) AS rate_lift,
-        stdev,
+        ROUND(stdev,4) AS stdev,
+        -- t_stat test statistic for calculating if average of the treatment group is statistically different from the average of the control group
         ROUND( (average-control_average) / SQRT((variance/users) + (control_variance/control_users)) , 4) AS t_stat
 FROM c 
-) SELECT * ,
-	
+) SELECT d.* ,
+	-- p-value to determine the test's statistical significance
+    -- COALESCE() : null이 아닌 인자 추출 
+	(1 - COALESCE(norm.value,1))*2 AS p_value
 FROM d
 LEFT JOIN normal_distribution norm
-	ON norm.score = ABS(ROUND(t_stat,3))
-    ;
+	ON norm.score = ABS(ROUND(t_stat,3)) ;
 
 
-select * from normal_distribution #WHERE score = 7.63
+
+-------------------------------------------------------------------------------------------------------------------------
+## Query 2: Control Group Users and Messages Sent
+-- user_id | metric
+
+SELECT DISTINCT experiment FROM experiments;
+SELECT ex.user_id,
+	SUM(CASE WHEN e.event_name = 'send_message' THEN 1 ELSE 0 END) AS metric
+FROM experiments ex
+JOIN events e 
+	ON ex.user_id = e.user_id
+    AND e.occurred_at >= ex.occurred_at
+    AND e.occurred_at < '2014-07-01'
+    AND e.event_type = 'engagement' 
+WHERE experiment_group = 'control_group' AND experiment ='publisher_update'
+GROUP BY 1
+ORDER BY 2 ;
+
+
+
+-------------------------------------------------------------------------------------------------------------------------
+## Query 3: Test Group Users and Messages Sent
+-- user_id | metric
+
+SELECT DISTINCT experiment FROM experiments;
+SELECT ex.user_id,
+	SUM(CASE WHEN e.event_name = 'send_message' THEN 1 ELSE 0 END) AS metric
+FROM experiments ex
+JOIN events e 
+	ON ex.user_id = e.user_id
+    AND e.occurred_at >= ex.occurred_at
+    AND e.occurred_at < '2014-07-01'
+    AND e.event_type = 'engagement' 
+WHERE experiment_group = 'test_group' AND experiment ='publisher_update'
+GROUP BY 1
+ORDER BY 2 ;
+
+
+
+-------------------------------------------------------------------------------------------------------------------------
+## Query 4: Experiment Group by Month Activated
+-- month_activated | control_users | test_users
+
+# 1) EXTRACT( FROM )
+SELECT EXTRACT(YEAR_MONTH FROM activated_at) AS month_activated,
+	SUM(CASE WHEN experiment_group = 'control_group' THEN 1 ELSE 0 END) AS control_users,
+	SUM(CASE WHEN experiment_group = 'test_group' THEN 1 ELSE 0 END) AS test_users
+FROM users  u 
+JOIN experiments ex 
+	ON u.user_id = ex.user_id 
+GROUP BY 1;
+
+# 2) DATE_FORMAT(  , '%Y-%m')
+SELECT DATE_FORMAT( activated_at, '%Y-%m-01 00:00:00') AS month_activated,
+	SUM(CASE WHEN experiment_group = 'control_group' THEN 1 ELSE 0 END) AS control_users,
+	SUM(CASE WHEN experiment_group = 'test_group' THEN 1 ELSE 0 END) AS test_users
+FROM users  u 
+JOIN experiments ex 
+	ON u.user_id = ex.user_id 
+GROUP BY 1;
+
+
+
+-------------------------------------------------------------------------------------------------------------------------
+## Query 5: Experiment Group by Device Type
+-- device_type | control_users | test_users
+
+SELECT * FROM experiments LIMIT 5;
+SELECT DISTINCT device FROM experiments; -- DEVICE TYPE
+
+WITH a AS (
+	SELECT experiment_group,
+		CASE 
+			WHEN (device like '%notebook%' OR device like '%desktop%' OR device like '%mac%' OR device like '%asus%' OR device like '%lenovo%') THEN 'computer' 
+			WHEN (device like '%phone%' OR device like '%nokia%' OR device like '%htc%' OR device like '%note%' OR device like '%nexus%' OR device like '%s4%') THEN 'mobile' 
+			ELSE 'tablet' END AS device_type
+	FROM experiments
+    WHERE experiment = 'publisher_update'
+)
+SELECT DISTINCT device_type,
+	SUM(CASE WHEN experiment_group = 'control_group' THEN 1 ELSE 0 END) AS control_group,
+	SUM(CASE WHEN experiment_group = 'test_group' THEN 1 ELSE 0 END) AS test_group
+FROM a
+GROUP BY 1
+ORDER BY 2;
+
+-------------------------------------------------------------------------------------------------------------------------
+## Query 6: Experiment Group by Lanugage
+
 
 
 
