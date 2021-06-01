@@ -4,7 +4,7 @@
 </br>
 
 * [Advanced SQL Queries](https://github.com/ttobaegi/MySQL/tree/main/AdvancedSQL)
->  * JOIN CTE ROLLUP
+>  * `JOIN` `CTE` `ROLLUP`
 
 * [SQL Queries for Test](https://github.com/ttobaegi/MySQL/tree/main/AdvancedSQL_Essential)
 >  * 
