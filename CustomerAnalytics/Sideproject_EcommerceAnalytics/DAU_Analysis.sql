@@ -1,6 +1,6 @@
 ## TACADEMY SQL ANALYSIS COURSE
 -- KPI ANALYSIS (PRACTICE)
--- 시계열 데이터의 경우, timstamp 타입에서 연,월,일 등을 따로 컬럼으로 추출하여 활용하는 것이 분석에 도움이 될 수 있다.
+-- 시계열 데이터 > timestamp 변수 활용 : year month date 변수 추가
 
 -- rowcount 472871 
 SELECT count(*) FROM website_sessions;
@@ -9,13 +9,14 @@ SELECT min(created_at), max(created_at)
 FROM website_sessions ;
 
 -- DAU : Daily Active User 일간 방문자 수 
+
 -- 단위 설정 : 로그인 ID 기준
 SELECT * FROM website_sessions	LIMIT 1 ;
 SELECT COUNT(DISTINCT user_id) 
 FROM website_sessions ;
 
--- WITH 구문으로 임시테이블 생성
--- define what an active user is 
+-- WITH 구문으로 임시테이블 생성 : Hour까지 구분
+-- Define what an active user is 
 WITH dau_table AS (
 			SELECT Year(Created_at) AS year ,
 					MONTH(Created_at) AS month ,
@@ -28,7 +29,7 @@ WITH dau_table AS (
 ) 
 SELECT * FROM dau_table
 
--- Daily
+-- Daily Active User
 WITH dau_table AS (
 			SELECT Year(Created_at) AS year ,
 					MONTH(Created_at) AS month ,
@@ -37,7 +38,7 @@ WITH dau_table AS (
 					HOUR(Created_at) AS hour,					
 					COUNT(DISTINCT user_id)	AS activity_users
 			FROM website_sessions
-			WHERE website_sessions.created_at BETWEEN '2013-01-01' AND '2013-12-31'
+			WHERE webs ite_sessions.created_at BETWEEN '2013-01-01' AND '2013-12-31'
 			GROUP BY 1,2,3,4,5				
 ) 
 SELECT date, SUM(activity_users)
