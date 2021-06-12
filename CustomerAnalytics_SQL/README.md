@@ -3,7 +3,7 @@
 
 </br>
 
-* [Ecommerce Analytics (user log database)](https://github.com/ttobaegi/MySQL/tree/main/CustomerAnalytics/2_Sideproject_EcommerceAnalytics)
+* [Ecommerce Analytics (user log database)](https://github.com/ttobaegi/MySQL/tree/main/CustomerAnalytics_SQL/2_Sideproject_EcommerceAnalytics)
 >  * DAU LTV Retention
 >  * Converstion Rate, Seasonality
 >  * (작업중)
