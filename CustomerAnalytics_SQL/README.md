@@ -8,6 +8,6 @@
 >  * Converstion Rate, Seasonality
 >  * (작업중)
 
-* [AB test for website (user & experiment log database)](https://github.com/ttobaegi/MySQL/tree/main/CustomerAnalytics/Sideproject_ABtest)
+* [AB test for website (user & experiment log database)](https://github.com/ttobaegi/MySQL/tree/main/CustomerAnalytics_SQL/1_Sideproject_ABtest)
 >  * t-test for experiment log data
 >  * (작업중)
