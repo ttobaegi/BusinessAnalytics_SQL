@@ -45,6 +45,8 @@ from website_sessions  w
 where w.created_at between '2012-4-1' and '2013-04-05'
 group by 1,2 ;
 
+
+-- 추가로 분석 가능한 
 -- product level website analysis 
 -- conversion rate by each product
 -- multi-product showcase pages 
