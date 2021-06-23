@@ -96,13 +96,8 @@ group by utm_source
 
 
 
--- ---------------------------------------------------------------------------------------------------
-### comparison of conversion rates and revenue per session for repeat sessions vs new sessions.
-
-
-
--- ---------------------------------------------------------------------------------------------------
-### comparison of conversion rates and revenue per 
+-- 추가로 분석 가능한 
+-- comparison of conversion rates and revenue per session for repeat sessions vs new sessions.
 
 
 
